@@ -6,6 +6,8 @@ import System.Directory (listDirectory)
 import Data.Strings (sEndsWith)
 import Text.Parsec
 
+import ImageMagick
+
 import qualified Data.Map.Strict as Map
 
 
@@ -22,6 +24,7 @@ data ImageDimensions = ImageDimensions { xPixels :: Integer, yPixels :: Integer 
     deriving (Eq, Ord, Show)
 
 data DPI = DPI { xDPI :: Integer, yDPI :: Integer }
+    deriving (Eq, Ord, Show)
 
 type FileName = String
 
@@ -66,23 +69,7 @@ groupByDimensions images = groupByDimensions' images Map.empty
             where
                 m'           = update image m
                 update image = Map.adjust (\l -> image:l) (imageDimensions image)
-
-
--- Refactor this into a seperate module.
-identifyOpts :: [String] -> FilePath -> IO String
-identifyOpts opts path = do
-    (_, Just hout, _, _) <- createProcess (proc "identify" (opts ++ [path])) { std_out = CreatePipe }
-    s                    <- hGetContents hout
-    return s
-
-identifyDefault :: FilePath -> IO String
-identifyDefault path = identifyOpts [] path
-
-identifyVerbose :: FilePath -> IO String
-identifyVerbose path = identifyOpts ["-verbose"] path
-
-identify = identifyDefault
-
+                
 
 getPages :: ImageFileFormat -> FilePath -> IO (FilePath, [FilePath])
 getPages ext path = getPages' ext' path
