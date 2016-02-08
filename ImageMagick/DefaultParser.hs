@@ -2,7 +2,8 @@ module ImageMagick.DefaultParser
     (
         imageMagickParser,
         parseImageFileInfo
-    ) where
+    ) 
+    where
 
 import Text.Parsec
 import ImageMagick.Types
@@ -38,12 +39,14 @@ parseDimensions = do
 
 
 parseImageFileFormat :: Stream s m Char => ParsecT s u m ImageFileFormat
-parseImageFileFormat =  (try (spaces >> string "TIFF") >> return TIFF)
-                    <|> (try (spaces >> string "TIF")  >> return TIFF)
-                    <|> (try (spaces >> string "JPG")  >> return JPEG)
-                    <|> (try (spaces >> string "JPEG") >> return JPEG)
-                    <|> (try (spaces >> string "PNG")  >> return PNG)
-                    <|> (spaces      >> skipMany upper >> return UNKNOWN)
+parseImageFileFormat =  
+        (try (spaces >> string "TIFF") >> return TIFF)
+    <|> (try (spaces >> string "TIF")  >> return TIFF)
+    <|> (try (spaces >> string "JPG")  >> return JPEG)
+    <|> (try (spaces >> string "JPEG") >> return JPEG)
+    <|> (try (spaces >> string "PNG")  >> return PNG)
+    <|> (spaces      >> skipMany upper >> return UNKNOWN)
+
 
 parseImageFileInfo :: String -> Either ParseError ImageFileInformation
 parseImageFileInfo s = runParser imageMagickParser () "" s

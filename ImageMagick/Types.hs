@@ -2,7 +2,7 @@ module ImageMagick.Types
     (
         ImageFileFormat(..),
         ImageDimensions(..),
-        DPI,
+        DPI(..),
         FileName,
         ImageFileInformation(..),
         mkImageFileInformation,

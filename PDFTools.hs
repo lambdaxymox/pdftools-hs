@@ -1,4 +1,5 @@
 import Control.Monad
+import Data.Either
 import System.Environment
 import System.IO
 import System.Process
@@ -37,10 +38,10 @@ groupByDimensions images = groupByDimensions' images Map.empty
                 update image = Map.adjust (\l -> image:l) (imageDimensions image)
 
 
-getPages :: ImageFileFormat -> FilePath -> IO (FilePath, [FilePath])
+getPages :: ImageFileFormat -> FilePath -> IO (FilePath, [FileName])
 getPages ext path = getPages' ext' path
     where
-        getPages' :: String -> FilePath -> IO (FilePath, [FilePath])
+        getPages' :: String -> FilePath -> IO (FilePath, [FileName])
         getPages' ext path = do
             files <- filter (endsWith ext) <$> listDirectory path
             return (path, files)
@@ -49,8 +50,21 @@ getPages ext path = getPages' ext' path
         endsWith = flip sEndsWith
 
 
-getImageInfo :: (FilePath, [FilePath]) -> [ImageFileInformation]
-getImageInfo (path, files) = []
+getPagesTiff :: FilePath -> IO (FilePath, [FileName])
+getPagesTiff = getPages TIFF
+
+
+getImageInfo :: (FilePath, [FileName]) -> IO [ImageFileInformation]
+getImageInfo (path, files) =
+    let
+        paths      = map (\f -> path ++ f) files
+        pageData   = map identify paths
+        parsedData = map (fmap parseImageFileInfo) pageData
+    in 
+        rights <$> sequence parsedData
+
+images :: FilePath -> IO [ImageFileInformation]
+images path = join $ getImageInfo <$> getPagesTiff path
 
 
 main :: IO ()
