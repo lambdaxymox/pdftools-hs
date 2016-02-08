@@ -41,7 +41,11 @@ groupByDimensions images = groupByDimensions' images Map.empty
         groupByDimensions' (image:images) m = groupByDimensions' images m'
             where
                 m'           = update image m
-                update image = Map.adjust (\l -> image:l) (imageDimensions image)
+                update image = case Map.lookup dimensions m of 
+                        Nothing -> Map.insert dimension [image] m
+                        Just _  -> Map.adjust (\l -> image:l) dimensions m
+                    where
+                        dimensions = imageDimensions image
 
 
 getPages :: ImageFileFormat -> FilePath -> IO (FilePath, [FileName])
