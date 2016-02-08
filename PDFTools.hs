@@ -9,13 +9,14 @@ import Text.Parsec
 import qualified Data.Map.Strict as Map
 
 
-data ImageFileExtension = TIFF | PNG | JPEG
+data ImageFileFormat = TIFF | PNG | JPEG | UNKNOWN
     deriving (Eq)
 
-instance Show ImageFileExtension where
-    show TIFF = "tiff"
-    show PNG  = "png"
-    show JPEG = "jpg"
+instance Show ImageFileFormat where
+    show TIFF    = "tiff"
+    show PNG     = "png"
+    show JPEG    = "jpg"
+    show UNKNOWN = "UNKNOWN"
 
 data ImageDimensions = ImageDimensions { xPixels :: Integer, yPixels :: Integer }
     deriving (Eq, Ord, Show)
@@ -23,28 +24,22 @@ data ImageDimensions = ImageDimensions { xPixels :: Integer, yPixels :: Integer 
 data DPI = DPI { xDPI :: Integer, yDPI :: Integer }
 
 type FileName = String
-type ImageMagickString = String
 
 data ImageFileInformation = ImageFileInformation
     {
         imageFileName       :: FileName,
-        imageFileExtensions :: ImageFileExtension,
+        imageFileExtensions :: ImageFileFormat,
         imageFilePath       :: FilePath,
         imageDimensions     :: ImageDimensions
     }
     deriving (Show)
 
+mkImageFileInformation :: FileName -> ImageFileFormat -> ImageDimensions -> ImageFileInformation
+mkImageFileInformation name fmt dims = ImageFileInformation name fmt "" dims
+
 
 mkDPI :: Integer -> DPI
 mkDPI res = DPI res res
-
-
-mkImageInformation :: FileName 
-                    -> ImageFileExtension
-                    -> FilePath
-                    -> ImageDimensions 
-                    -> ImageFileInformation
-mkImageInformation = ImageFileInformation
 
 
 countByDimensions :: [ImageFileInformation] ->  Map.Map ImageDimensions Integer
@@ -73,6 +68,7 @@ groupByDimensions images = groupByDimensions' images Map.empty
                 update image = Map.adjust (\l -> image:l) (imageDimensions image)
 
 
+-- Refactor this into a seperate module.
 identifyOpts :: [String] -> FilePath -> IO String
 identifyOpts opts path = do
     (_, Just hout, _, _) <- createProcess (proc "identify" (opts ++ [path])) { std_out = CreatePipe }
@@ -88,7 +84,7 @@ identifyVerbose path = identifyOpts ["-verbose"] path
 identify = identifyDefault
 
 
-getPages :: ImageFileExtension -> FilePath -> IO (FilePath, [FilePath])
+getPages :: ImageFileFormat -> FilePath -> IO (FilePath, [FilePath])
 getPages ext path = getPages' ext' path
     where
         getPages' :: String -> FilePath -> IO (FilePath, [FilePath])
@@ -108,15 +104,21 @@ splitOnSpace :: Stream s m Char => ParsecT s u m [String]
 splitOnSpace = sepBy (many (noneOf " ")) spaces
 
 
-imageMagickParser :: Stream s m Char => ParsecT s u m ([String] -> ImageFileInformation)
-imageMagickParser = return $ \ss ->
-    let
-        fname = ss !! 0
-        ext = TIFF
-        fpath = ""
-        imageDims = ImageDimensions 0 0
-    in 
-        ImageFileInformation fname ext fpath imageDims
+imageMagickParser :: Stream s m Char => ParsecT s u m ImageFileInformation
+imageMagickParser = do
+    name       <- parseFileName
+    spaces
+    format     <- parseImageFileFormat
+    spaces
+    dimensions <- parseDimensions
+    return $ mkImageFileInformation name format dimensions
+
+
+parseFileName :: Stream s m Char => ParsecT s u m FileName
+parseFileName = do
+    name <- many1 (noneOf ".")
+    ext  <- many1 (noneOf " ")
+    return $ name ++ ext
 
 
 parseDimensions :: Stream s m Char => ParsecT s u m ImageDimensions
@@ -127,10 +129,16 @@ parseDimensions = do
     return $ ImageDimensions (read width) (read height)
 
 
+parseImageFileFormat :: Stream s m Char => ParsecT s u m ImageFileFormat
+parseImageFileFormat =  (try (spaces >> string "TIFF") >> return TIFF)
+                    <|> (try (spaces >> string "TIF")  >> return TIFF)
+                    <|> (try (spaces >> string "JPG")  >> return JPEG)
+                    <|> (try (spaces >> string "JPEG") >> return JPEG)
+                    <|> (try (spaces >> string "PNG")  >> return PNG)
+                    <|> (spaces      >> skipMany upper >> return UNKNOWN)
 
-
-parseImageInfo :: String -> Either ParseError ImageFileInformation
-parseImageInfo s = runParser (imageMagickParser <*> splitOnSpace) () "" s
+parseImageFileInfo :: String -> Either ParseError ImageFileInformation
+parseImageFileInfo s = runParser imageMagickParser () "" s
 
 
 main :: IO ()
