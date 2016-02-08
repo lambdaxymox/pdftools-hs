@@ -1,10 +1,12 @@
-import Control.Monad
-import Data.Either
+import Control.Monad (join)
+import Data.Either (rights)
+import Data.Strings (sEndsWith)
+
 import System.Environment
 import System.IO
 import System.Process
 import System.Directory (listDirectory)
-import Data.Strings (sEndsWith)
+
 import Text.Parsec
 
 import ImageMagick
@@ -21,8 +23,12 @@ countByDimensions images = countByDimensions' images Map.empty
         countByDimensions' [] m             = m
         countByDimensions' (image:images) m = countByDimensions' images m'
             where
-                m'           = update image m 
-                update image = Map.adjust (+1) (imageDimensions image)
+                m'             = update image m 
+                update image m = case Map.lookup dimensions m of 
+                        Nothing -> Map.insert dimensions 1 m
+                        Just _  -> Map.adjust (+1) dimensions m
+                    where
+                        dimensions = imageDimensions image
 
 
 groupByDimensions :: [ImageFileInformation] -> Map.Map ImageDimensions [ImageFileInformation]
