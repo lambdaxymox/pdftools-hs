@@ -38,9 +38,6 @@ data ImageFileInformation = ImageFileInformation
 mkDPI :: Integer -> DPI
 mkDPI res = DPI res res
 
-mkImageDimensions :: Integer -> Integer -> ImageDimensions
-mkImageDimensions = ImageDimensions
-
 
 mkImageInformation :: FileName 
                     -> ImageFileExtension
@@ -76,19 +73,20 @@ groupByDimensions images = groupByDimensions' images Map.empty
                 update image = Map.adjust (\l -> image:l) (imageDimensions image)
 
 
-identify :: FilePath -> IO String
-identify path = do
-    (_, Just hout, _, _) <- createProcess (proc "identify" [path]) { std_out = CreatePipe }
+identifyOpts :: [String] -> FilePath -> IO String
+identifyOpts opts path = do
+    (_, Just hout, _, _) <- createProcess (proc "identify" (opts ++ [path])) { std_out = CreatePipe }
     s                    <- hGetContents hout
     return s
 
-{-
-identify :: FilePath -> IO String
-identify path = do
-    (_, Just hout, _, _) <- createProcess (proc "identify" ["-verbose", path]) { std_out = CreatePipe }
-    s                    <- hGetContents hout
-    return s
--}
+identifyDefault :: FilePath -> IO String
+identifyDefault path = identifyOpts [] path
+
+identifyVerbose :: FilePath -> IO String
+identifyVerbose path = identifyOpts ["-verbose"] path
+
+identify = identifyDefault
+
 
 getPages :: ImageFileExtension -> FilePath -> IO (FilePath, [FilePath])
 getPages ext path = getPages' ext' path
@@ -116,19 +114,19 @@ imageMagickParser = return $ \ss ->
         fname = ss !! 0
         ext = TIFF
         fpath = ""
-        imageDims = mkImageDimensions 0 0
+        imageDims = ImageDimensions 0 0
     in 
-        mkImageInformation fname ext fpath imageDims
+        ImageFileInformation fname ext fpath imageDims
 
 
-dimensionsParser :: Stream s m Char => ParsecT s u m (String -> Maybe ImageDimensions)
-dimensionsParser = return $ \s ->
-    let
-        res = runParser (sepBy (many digit) (oneOf "x")) () "" s
+parseDimensions :: Stream s m Char => ParsecT s u m ImageDimensions
+parseDimensions = do
+    width <- many1 digit
+    char 'x'
+    height <- try (manyTill digit (oneOf " ")) <|> try (manyTill digit eof)
+    return $ ImageDimensions (read width) (read height)
 
-    in case res of
-        Right [lstr, hstr] -> Just $ mkImageDimensions (read lstr) (read hstr)
-        Left err           -> Nothing
+
 
 
 parseImageInfo :: String -> Either ParseError ImageFileInformation
