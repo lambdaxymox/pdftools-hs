@@ -17,9 +17,9 @@ data ImageFileFormat = TIFF | PNG | JPEG | UNKNOWN
     deriving (Eq)
 
 data ImageDimensions = ImageDimensions { xPixels :: Integer, yPixels :: Integer }
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
 
-data DPI = DPI { xDPI :: Integer, yDPI :: Integer }
+data ImageResolution = ImageResolution { xRes :: Integer, yRes :: Integer }
     deriving (Eq, Ord, Show)
 
 type FileName = String
@@ -41,9 +41,13 @@ instance Show ImageFileFormat where
     show UNKNOWN = "UNKNOWN"
 
 
+instance Show ImageDimensions where
+    show a = show (xPixels a) ++ "x" ++ show (yPixels a)
+
+
 mkImageFileInformation :: FileName -> ImageFileFormat -> ImageDimensions -> ImageFileInformation
 mkImageFileInformation name fmt dims = ImageFileInformation name fmt "" dims
 
 
-mkDPI :: Integer -> DPI
+mkDPI :: Integer -> ImageResolution
 mkDPI res = DPI res res

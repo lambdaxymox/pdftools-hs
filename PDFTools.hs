@@ -40,9 +40,9 @@ groupByDimensions images = groupByDimensions' images Map.empty
         groupByDimensions' [] m             = m
         groupByDimensions' (image:images) m = groupByDimensions' images m'
             where
-                m'           = update image m
-                update image = case Map.lookup dimensions m of 
-                        Nothing -> Map.insert dimension [image] m
+                m'             = update image m
+                update image m = case Map.lookup dimensions m of 
+                        Nothing -> Map.insert dimensions [image] m
                         Just _  -> Map.adjust (\l -> image:l) dimensions m
                     where
                         dimensions = imageDimensions image
