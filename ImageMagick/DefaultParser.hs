@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleContexts  #-}
+
+
 module ImageMagick.DefaultParser
     (
         imageMagickParser,

@@ -2,11 +2,11 @@ module ImageMagick.Types
     (
         ImageFileFormat(..),
         ImageDimensions(..),
-        DPI(..),
+        ImageResolution(..),
         FileName,
         ImageFileInformation(..),
         mkImageFileInformation,
-        mkDPI
+        mkResolution
     ) where
 
 
@@ -49,5 +49,5 @@ mkImageFileInformation :: FileName -> ImageFileFormat -> ImageDimensions -> Imag
 mkImageFileInformation name fmt dims = ImageFileInformation name fmt "" dims
 
 
-mkDPI :: Integer -> ImageResolution
-mkDPI res = DPI res res
+mkResolution :: Integer -> ImageResolution
+mkResolution res = ImageResolution res res
